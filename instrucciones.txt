@@ -1,0 +1,21 @@
+# Instrucciones para ejecutar el sistema Melody
+
+## 1. descomprima o guarde en una carpeta 
+
+## 2. Instalar dependencias
+# Este comando instalará todas las librerías necesarias desde requirements.txt
+pip install -r requirements.txt
+
+## 3. Configuración de la base de datos
+#el archivo data.sqlite ingresar a su gestor de base de datos que es sqlite browser que eso permite que lea la informacion
+# No necesitas crear nada: Flask usará automáticamente este archivo como base de datos.
+
+## 4. Iniciar la aplicación
+# Ejecuta el servidor Flask con:
+python app.py
+
+## 5. Abrir en el navegador
+# Una vez iniciado, abre tu navegador y visita:
+http://127.0.0.1:5000
+
+# Allí podrás ver la aplicación funcionando con la base de datos data.sqlite.
