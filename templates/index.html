@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Melody — Interfaz inmersiva</title>
+    <meta name="description" content="Melody — describe cómo te sientes y recibe sonidos guiados con una experiencia visual inmersiva." />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  </head>
+  <body>
+    <!-- Canvas de fondo (partículas) -->
+    <canvas id="bg-canvas" class="bg-canvas" aria-hidden="true"></canvas>
+
+    <div class="stage">
+      <header class="hero">
+        <div class="brand">
+          <div class="logo">
+            <!-- SVG distintivo -->
+            <svg viewBox="0 0 80 80" width="56" height="56" aria-hidden="true">
+              <defs>
+                <linearGradient id="g1" x1="0" x2="1">
+                  <stop offset="0" stop-color="#7EE7C7"/>
+                  <stop offset="1" stop-color="#3B82F6"/>
+                </linearGradient>
+                <filter id="f1" x="-20%" y="-20%" width="140%" height="140%">
+                  <feGaussianBlur stdDeviation="6" result="b"/>
+                  <feBlend in="SourceGraphic" in2="b"/>
+                </filter>
+              </defs>
+              <rect x="6" y="6" width="68" height="68" rx="18" fill="url(#g1)" filter="url(#f1)"/>
+              <path d="M24 46c6-6 16-12 28-10" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+              <circle cx="30" cy="36" r="3" fill="white"/>
+              <circle cx="46" cy="30" r="2.6" fill="white"/>
+            </svg>
+          </div>
+          <div class="brand-copy">
+            <h1>Melody</h1>
+            <p class="subtitle">Sonidos guiados • Privacidad local • Experiencia inmersiva</p>
+          </div>
+        </div>
+
+        <nav class="hero-actions" aria-label="Acciones principales">
+          <button class="btn ghost" id="demo-btn" type="button">Ver demo</button>
+          <a class="btn primary" href="#form" role="button">Comenzar</a>
+        </nav>
+      </header>
+
+      <main class="container">
+        <!-- Formulario principal -->
+        <section id="form" class="card glass form-hero" aria-labelledby="form-title">
+          <div class="form-left">
+            <h2 id="form-title" class="title-glow">¿Cómo te sientes hoy?</h2>
+            <p class="lead">Escribe una frase corta. Melody te sugerirá sonidos y apoyo adaptado.</p>
+
+            <form method="post" novalidate id="emotion-form">
+              <label class="sr-only" for="texto_usuario">Describe cómo te sientes</label>
+              <textarea id="texto_usuario" name="texto_usuario" placeholder='Ej: "siento mucho luto y no sé cómo seguir..."' required>{{ texto or "" }}</textarea>
+
+              <div class="form-row">
+                <button class="btn primary" type="submit">Analizar y Recomendar</button>
+                <button class="btn ghost" id="quick-phrase" type="button">Frase rápida</button>
+              </div>
+
+              <div class="form-meta">
+                <span class="chip">Privado · Local</span>
+                <span class="chip">Feedback activo</span>
+              </div>
+            </form>
+          </div>
+
+          <div class="form-right">
+            <!-- Tarjeta visual con onda / resumen -->
+            <div class="visualizer" aria-hidden="true">
+              <svg viewBox="0 0 200 120" preserveAspectRatio="none" class="wave-svg">
+                <path id="wave" d="M0 60 Q50 40 100 60 T200 60 L200 120 L0 120 Z" fill="url(#wg)"/>
+                <defs>
+                  <linearGradient id="wg" x1="0" x2="1">
+                    <stop offset="0" stop-color="#7EE7C7"/>
+                    <stop offset="1" stop-color="#3B82F6"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+
+            <div class="mini-stats">
+              <div class="stat">
+                <div class="stat-num" id="stat-detections">—</div>
+                <div class="stat-label">Interacciones</div>
+              </div>
+              <div class="stat">
+                <div class="stat-num" id="stat-emotions">—</div>
+                <div class="stat-label">Emociones</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- RESULTADOS -->
+        {% if respuesta %}
+        <section class="result-area" aria-live="polite" id="results">
+          <div class="result-top">
+            <div class="result-left card glass">
+              <div class="result-header">
+                <h2 class="result-title">Resultado</h2>
+                <div class="emotion-chip">{{ respuesta.emocion_principal or "No detectada" }}</div>
+              </div>
+
+              <div class="analysis rich-text">
+                <pre class="analysis-text">{{ respuesta.mensaje }}</pre>
+              </div>
+
+              <div class="motivational">
+                <strong>Apoyo:</strong> <span>{{ respuesta.motivacion }}</span>
+              </div>
+
+              {% if respuesta.need_label %}
+                <div class="label-suggest">
+                  <small>¿Quiso decir: <strong>{{ respuesta.alias_hint }}</strong>?</small>
+                  <button class="btn small" id="open-label">Enseñar a Melody</button>
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="result-right card glass">
+              {% if respuesta.imagen_emocion %}
+                <div class="emotion-visual">
+                  <img src="{{ respuesta.imagen_emocion }}" alt="Imagen de la emoción" loading="lazy">
+                </div>
+              {% else %}
+                <div class="emotion-visual placeholder">
+                  <svg width="120" height="120" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10" fill="#f1f5f9"/>
+                    <path d="M8 14s1.2 3 4 3 4-3 4-3" stroke="#0f766e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    <path d="M9 10h.01M15 10h.01" stroke="#0f766e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+              {% endif %}
+
+              <div class="result-meta">
+                <small>Intensidad: {{ respuesta.intensidad }}</small>
+                <small>Detectadas: {{ respuesta.emociones_detectadas }}</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="sounds-grid card">
+            <h3 class="sounds-title">Sonidos sugeridos</h3>
+            <div class="grid" id="sounds-grid">
+              {% for s in respuesta.sonidos %}
+              <article class="sound-card" data-sound="{{ s.id }}" tabindex="0" aria-label="{{ s.nombre }}">
+                <div class="sound-left">
+                  <strong class="sound-name">{{ s.nombre }}</strong>
+                  <div class="sound-sub">{{ s.uso }}</div>
+                </div>
+
+                <div class="sound-right">
+                  <div class="player-wrap">
+                    <audio class="audio-player" controls preload="none" data-src="/static/sound/{{ s.id }}.mp3">
+                      <source type="audio/mpeg" src="/static/sound/{{ s.id }}.mp3">
+                      Tu navegador no soporta audio.
+                    </audio>
+                    <div class="viz-bars" aria-hidden="true">
+                      <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                  </div>
+
+                  <div class="sound-actions">
+                    <button class="btn-feedback" data-accion="positivo" data-sonido="{{ s.id }}" title="Me gustó">👍</button>
+                    <button class="btn-feedback" data-accion="negativo" data-sonido="{{ s.id }}" title="No me gustó">👎</button>
+                    <button class="btn-feedback" data-accion="aceptar" data-sonido="{{ s.id }}" title="Aceptar">✅</button>
+                  </div>
+                </div>
+              </article>
+              {% endfor %}
+            </div>
+          </div>
+        </section>
+        {% endif %}
+
+        <footer class="footer">
+          <div>Melody — Privacidad local • Diseñado con cuidado</div>
+          <div class="footer-right"><small>Versión experimental</small></div>
+        </footer>
+      </main>
+    </div>
+
+    <!-- MODAL: enseñar alias -->
+    <div id="label-modal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="label-title">
+      <div class="modal-panel" role="document">
+        <h3 id="label-title">Enseñar nueva palabra</h3>
+        <p class="muted">Asocia la palabra sugerida con una emoción conocida y escribe un mensaje de apoyo que Melody mostrará a futuros usuarios.</p>
+
+        <label for="alias-input">Palabra (alias)</label>
+        <input id="alias-input" type="text" readonly>
+
+        <label for="target-select">Emotion objetivo</label>
+        <select id="target-select">
+          {% for e in PRIORIDADES %}
+            <option value="{{ e }}">{{ e.replace('_',' ') }}</option>
+          {% endfor %}
+          <option value="_new">Otra (escribir)</option>
+        </select>
+
+        <input id="target-new" type="text" placeholder="Escribe nueva emoción (ej: luto_extremo)" style="display:none;">
+
+        <label for="alias-msg">Mensaje para quien use esa palabra</label>
+        <textarea id="alias-msg" rows="3" placeholder="Ej: Lamento tu pérdida. Si quieres, puedo acompañarte con sonidos..."></textarea>
+
+        <div class="modal-actions">
+          <button id="label-save" class="btn primary">Guardar</button>
+          <button id="label-cancel" class="btn ghost">Cancelar</button>
+        </div>
+        <div id="label-status" class="label-status" aria-live="polite"></div>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  </body>
+</html>
